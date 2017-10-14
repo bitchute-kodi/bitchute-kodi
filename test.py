@@ -4,7 +4,6 @@ import requests
 from bs4 import BeautifulSoup
 
 baseUrl = "https://www.bitchute.com"
-
 class VideoLink:
 	def __init__(self, containerSoup):
 		titleDiv = containerSoup.findAll('div', "channel-videos-title")[0]
@@ -46,9 +45,21 @@ class Channel:
 		else:
 			raise ValueError("channel Id not found for " + self.channelName + ".")
 
-x = Channel("InRangeTV")
-print(x.channelName + " (" + x.id + ")")
-print("Videos:")
-for video in x.videos:
-	print(video.title + "\n" + video.thumbnail + "\n" + video.getUrl(x.id) + "\n")
+subscriptions = ["InRangeTV", "mediamonarchy"]
+channels = []
+for channel in subscriptions:
+	channels.append(Channel(channel))
+
+for channel in channels:
+	print(channel.channelName + " (" + channel.id + ")")
+	print("Videos:")
+	for video in channel.videos:
+		print(video.title + "\n" + video.thumbnail + "\n" + video.getUrl(channel.id) + "\n")
+
+
+# x = Channel("InRangeTV")
+# print(x.channelName + " (" + x.id + ")")
+# print("Videos:")
+# for video in x.videos:
+# 	print(video.title + "\n" + video.thumbnail + "\n" + video.getUrl(x.id) + "\n")
 
