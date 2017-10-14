@@ -4,30 +4,39 @@ import requests
 from bs4 import BeautifulSoup
 
 baseUrl = "https://www.bitchute.com"
-channelName = "InRangeTV"
 
-r = requests.get(baseUrl + "/" + channelName)
-soup = BeautifulSoup(r.text, 'html.parser')
+class VideoLink:
+	def __init__(self, linkSoup):
+		self.title = linkSoup.string
+		self.pageUrl = linkSoup.get("href")
+		self.id = self.pageUrl.split("/")[-1]
 
-links = []
-linksDivs = soup.findAll('div', "channel-videos-title")
-for div in linksDivs:
-	for link in div.findAll('a'):
-		print(link.string)
-		print(link.get("href"))
-		links.append(link.get("href"))
+	def getUrl(self, channelId):
+		return(baseUrl + "/torrent/" + channelId + "/" + self.id + ".torrent")
 
-videoId = links[-1].split("/")[-1]
-print("Video ID: " + videoId)
+class Channel:
+	def __init__(self, channelName):
+		self.channelName = channelName
+		self.videos = []
 
-videoRequest = requests.get(baseUrl + links[-1])
+		r = requests.get(baseUrl + "/" + self.channelName)
+		soup = BeautifulSoup(r.text, 'html.parser')
+		for div in soup.findAll('div', "channel-videos-title"):
+			for link in div.findAll('a'):
+				self.videos.append(VideoLink(link))
 
-channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
-if channelIdMatches:
-	channelId = channelIdMatches.group().split("/")[-1]
-	print("Channel Id: " + channelId)
-else:
-	print("channelId not found.")
+		# for now I only know how to find the ID from a video, so take the last item
+		# in videos and find the channel's ID.
+		videoRequest = requests.get(baseUrl + self.videos[-1].pageUrl)
+		channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
+		if channelIdMatches:
+			self.id = channelIdMatches.group().split("/")[-1]
+		else:
+			raise ValueError("channel Id not found for " + self.channelName + ".")
 
-torrentUrl = baseUrl + "/torrent/" + channelId + "/" + videoId + ".torrent"
-print(torrentUrl)
+x = Channel("InRangeTV")
+print(x.channelName + " (" + x.id + ")")
+print("Videos:")
+for video in x.videos:
+	print(video.title + "\n" + video.getUrl(x.id))
+
