@@ -13,6 +13,7 @@ class VideoLink:
 		self.pageUrl = linkSoup.get("href")
 		self.id = self.pageUrl.split("/")[-1]
 		self.thumbnail = None
+		self.url = None
 		#before we can find thumnails let's strip out play button images.
 		for playButton in containerSoup.findAll('img', "play-overlay-icon"):
 			playButton.extract()
@@ -24,6 +25,8 @@ class VideoLink:
 
 	def getUrl(self, channelId):
 		return(baseUrl + "/torrent/" + channelId + "/" + self.id + ".torrent")
+	def setUrl(self, channelId):
+		self.url = self.getUrl(channelId)
 
 class Channel:
 	def __init__(self, channelName):
@@ -49,6 +52,10 @@ class Channel:
 			self.id = channelIdMatches.group().split("/")[-1]
 		else:
 			raise ValueError("channel Id not found for " + self.channelName + ".")
+		
+		# armed with a channelId we can set the url for all our videos.
+		for video in self.videos:
+			video.setUrl(self.id)
 
 subscriptions = ["InRangeTV", "mediamonarchy"]
 channels = []
@@ -60,7 +67,7 @@ for channel in channels:
 	print(channel.thumbnail)
 	print("Videos:")
 	for video in channel.videos:
-		print(video.title + "\n" + video.thumbnail + "\n" + video.getUrl(channel.id) + "\n")
+		print(video.title + "\n" + video.thumbnail + "\n" + video.url + "\n")
 
 
 # x = Channel("InRangeTV")
