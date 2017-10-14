@@ -29,9 +29,14 @@ class Channel:
 	def __init__(self, channelName):
 		self.channelName = channelName
 		self.videos = []
+		self.thumbnail = None
 
 		r = requests.get(baseUrl + "/" + self.channelName)
 		soup = BeautifulSoup(r.text, 'html.parser')
+
+		thumbnailImages = soup.findAll("img", id="fileupload-medium-icon-2")
+		if thumbnailImages:
+			self.thumbnail = baseUrl + thumbnailImages[0].get("src")
 
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink(videoContainer))
@@ -52,6 +57,7 @@ for channel in subscriptions:
 
 for channel in channels:
 	print(channel.channelName + " (" + channel.id + ")")
+	print(channel.thumbnail)
 	print("Videos:")
 	for video in channel.videos:
 		print(video.title + "\n" + video.thumbnail + "\n" + video.getUrl(channel.id) + "\n")
