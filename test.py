@@ -111,16 +111,29 @@ def getSessionCookie():
 		if now >= cookie['expires']:
 			cookies = login()
 			break
-	#mangle a cookie and see what happens
-	cookies[-1]['value'] = "000"
+	
 	jar = requests.cookies.RequestsCookieJar()
 	for cookie in cookies:
 		jar.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'], expires=cookie['expires'])
 	
 	return jar
 
+def fetchLoggedIn(url):
+	req = requests.get(url, cookies=sessionCookies)
+	soup = BeautifulSoup(req.text, 'html.parser')
+	loginUser = soup.findAll("div", {"class":"login-user"})
+	if loginUser:
+		profileLink = loginUser[0].findAll("a",{"class":"auth-link", "href":"/profile"})
+		if profileLink:
+			return req
+	#Our cookies have gone stale, clear them out.
+	cookiesFile = open("cookies.json", "w")
+	cookiesFile.write("")
+	cookiesFile.close()
+	raise ValueError("Not currently logged in.")
+
 sessionCookies = getSessionCookie()
-subs = requests.get(baseUrl + "/subscriptions", cookies=sessionCookies)
+subs = fetchLoggedIn(baseUrl + "/subscriptions")
 file = open("output.txt", "w")
 file.write(subs.text)
 file.close()
