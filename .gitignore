@@ -102,3 +102,7 @@ ENV/
 
 # VS Code cruft
 .vscode
+
+settings.json
+cookies.json
+output.txt
