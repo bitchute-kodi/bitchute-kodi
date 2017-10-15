@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import re
 import json
+import time
 import requests
 from bs4 import BeautifulSoup
 import subprocess
 
 baseUrl = "https://www.bitchute.com"
+
 class VideoLink:
 	def __init__(self, containerSoup):
 		titleDiv = containerSoup.findAll('div', "channel-videos-title")[0]
@@ -66,8 +68,18 @@ def login():
 	soup = BeautifulSoup(r.text, 'html.parser')
 	csrftoken = soup.findAll("input", {"name":"csrfmiddlewaretoken"})[0].get("value")
 
-	username = str(input("Username: "))
-	password = str(input("Password: "))
+	username = None
+	password = None
+
+	#Fetch the user info from settings.json
+	settingsFile = open("settings.json", "r")
+	settings = json.loads(settingsFile.read())
+	settingsFile.close()
+	for key in settings.keys():
+		if key == "username":
+			username = settings[key]
+		elif key == "password":
+			password = settings[key]
 
 	post_data = {'csrfmiddlewaretoken': csrftoken, 'username': username, 'password': password}
 	headers = {'Referer': baseUrl + "/", 'Origin': baseUrl}
@@ -75,19 +87,43 @@ def login():
 	authCookies = []
 	for cookie in response.cookies:
 		authCookies.append({ 'name': cookie.name, 'value': cookie.value, 'domain': cookie.domain, 'path': cookie.path, 'expires': cookie.expires })
+	
+	#stash our cookies in our JSON cookie jar
 	cookiesJson = json.dumps(authCookies)
+	cookiesFile = open("cookies.json", "w")
+	cookiesFile.write(cookiesJson)
+	cookiesFile.close()
 	
+	return(authCookies)
+	
+def getSessionCookie():
+	cookiesFile = open("cookies.json", "r")
+	cookiesString = cookiesFile.read()
+	cookiesFile.close()
+	if cookiesString:
+		cookies = json.loads(cookiesString)
+	else:
+		cookies = login()
+	
+	#If our cookies have expired we'll need to get new ones.
+	now = int(time.time())
+	for cookie in cookies:
+		if now >= cookie['expires']:
+			cookies = login()
+			break
+	#mangle a cookie and see what happens
+	cookies[-1]['value'] = "000"
 	jar = requests.cookies.RequestsCookieJar()
-	for cookie in authCookies:
+	for cookie in cookies:
 		jar.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'], expires=cookie['expires'])
-
-	subs = requests.get(baseUrl + "/subscriptions", cookies=jar)
-	file = open("output", "w")
-	file.write(subs.text)
-	file.close()
 	
+	return jar
 
-login()
+sessionCookies = getSessionCookie()
+subs = requests.get(baseUrl + "/subscriptions", cookies=sessionCookies)
+file = open("output.txt", "w")
+file.write(subs.text)
+file.close()
 raise ValueError("Done testing login.")
 
 subscriptions = ["InRangeTV", "mediamonarchy"]
