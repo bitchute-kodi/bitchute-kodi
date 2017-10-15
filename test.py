@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import json
 import requests
 from bs4 import BeautifulSoup
 import subprocess
@@ -58,6 +59,37 @@ class Channel:
 		for video in self.videos:
 			video.setUrl(self.id)
 
+def login():
+	#BitChute uses a token to prevent csrf attacks, get the token to make our request.
+	r = requests.get(baseUrl)
+	csrfJar = r.cookies
+	soup = BeautifulSoup(r.text, 'html.parser')
+	csrftoken = soup.findAll("input", {"name":"csrfmiddlewaretoken"})[0].get("value")
+
+	username = str(input("Username: "))
+	password = str(input("Password: "))
+
+	post_data = {'csrfmiddlewaretoken': csrftoken, 'username': username, 'password': password}
+	headers = {'Referer': baseUrl + "/", 'Origin': baseUrl}
+	response = requests.post(baseUrl + "/accounts/login/", data=post_data, headers=headers, cookies=csrfJar)
+	authCookies = []
+	for cookie in response.cookies:
+		authCookies.append({ 'name': cookie.name, 'value': cookie.value, 'domain': cookie.domain, 'path': cookie.path, 'expires': cookie.expires })
+	cookiesJson = json.dumps(authCookies)
+	
+	jar = requests.cookies.RequestsCookieJar()
+	for cookie in authCookies:
+		jar.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'], expires=cookie['expires'])
+
+	subs = requests.get(baseUrl + "/subscriptions", cookies=jar)
+	file = open("output", "w")
+	file.write(subs.text)
+	file.close()
+	
+
+login()
+raise ValueError("Done testing login.")
+
 subscriptions = ["InRangeTV", "mediamonarchy"]
 channels = []
 for channel in subscriptions:
@@ -94,15 +126,3 @@ else:
 
 print("Streaming at: " + dlnaUrl)
 webTorrentClient.terminate()
-# poll = webTorrentClient.poll()
-# while poll == None:
-# 	print(webTorrentClient.communicate()[0])
-	# poll = webTorrentClient.poll()
-
-
-# x = Channel("InRangeTV")
-# print(x.channelName + " (" + x.id + ")")
-# print("Videos:")
-# for video in x.videos:
-# 	print(video.title + "\n" + video.thumbnail + "\n" + video.getUrl(x.id) + "\n")
-
