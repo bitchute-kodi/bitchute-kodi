@@ -132,17 +132,18 @@ def fetchLoggedIn(url):
 	cookiesFile.close()
 	raise ValueError("Not currently logged in.")
 
-sessionCookies = getSessionCookie()
-subs = fetchLoggedIn(baseUrl + "/subscriptions")
-file = open("output.txt", "w")
-file.write(subs.text)
-file.close()
-raise ValueError("Done testing login.")
+def getSubscriptions():
+	subscriptions = []
+	req = fetchLoggedIn(baseUrl + "/subscriptions")
+	soup = BeautifulSoup(req.text, 'html.parser')
+	for container in soup.findAll("div", {"class":"subscription-container"}):
+		for link in container.findAll("a", {"rel":"author"}):
+			name = link.get("href").split("/")[-1]
+			subscriptions.append(Channel(name))
+	return(subscriptions)
 
-subscriptions = ["InRangeTV", "mediamonarchy"]
-channels = []
-for channel in subscriptions:
-	channels.append(Channel(channel))
+sessionCookies = getSessionCookie()
+channels = getSubscriptions()
 
 for channel in channels:
 	print(channel.channelName + " (" + channel.id + ")")
