@@ -2,6 +2,7 @@
 import re
 import requests
 from bs4 import BeautifulSoup
+import subprocess
 
 baseUrl = "https://www.bitchute.com"
 class VideoLink:
@@ -68,6 +69,35 @@ for channel in channels:
 	print("Videos:")
 	for video in channel.videos:
 		print(video.title + "\n" + video.thumbnail + "\n" + video.url + "\n")
+
+vid = channels[-1].videos[-1]
+
+output = ""
+cnt = 0
+dlnaUrl = None
+webTorrentClient = subprocess.Popen(["/usr/local/bin/webtorrent-hybrid", vid.url, "--dlna"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+print("running with PID " + str(webTorrentClient.pid))
+for stdout_line in webTorrentClient.stdout:
+	output += stdout_line.decode()
+	cnt += 1
+	if cnt > 10:
+		break
+webTorrentClient.stdout.close()
+print("done with capturing output.")
+
+dlnaMatches = re.search('http:\/\/((\w|\d)+(\.)*)+:\d+\/\d+', output)
+if dlnaMatches:
+	dlnaUrl = dlnaMatches.group()
+else:
+	webTorrentClient.terminate()
+	raise ValueError("could not determine the dlna URL.")
+
+print("Streaming at: " + dlnaUrl)
+webTorrentClient.terminate()
+# poll = webTorrentClient.poll()
+# while poll == None:
+# 	print(webTorrentClient.communicate()[0])
+	# poll = webTorrentClient.poll()
 
 
 # x = Channel("InRangeTV")
