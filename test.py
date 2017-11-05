@@ -44,7 +44,12 @@ class Channel:
 		self.setPage(self.page)
 
 	def setPage(self, pageNumber):
-		r = requests.get(baseUrl + "/" + self.channelName)
+		self.videos = []
+		self.thumbnail = None
+		self.page = pageNumber
+		self.hasPrevPage = False
+		self.hasNextPage = False
+		r = requests.get(baseUrl + "/" + self.channelName + "/?page=" + str(self.page))
 		soup = BeautifulSoup(r.text, 'html.parser')
 
 		thumbnailImages = soup.findAll("img", id="fileupload-medium-icon-2")
@@ -177,6 +182,10 @@ for channel in channels:
 		print("Has Prev: false")
 	if channel.hasNextPage:
 		print("Has Next: true")
+		channel.setPage(channel.page + 1)
+		print("Page: " + str(channel.page))
+		for video in channel.videos:
+			print(video.title + "\n" + video.thumbnail + "\n" + video.url + "\n")
 	else:
 		print("Has Next: false")
 
