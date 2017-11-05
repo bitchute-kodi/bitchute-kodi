@@ -37,6 +37,9 @@ class Channel:
 		self.channelName = channelName
 		self.videos = []
 		self.thumbnail = None
+		self.page = 1
+		self.hasPrevPage = False
+		self.hasNextPage = False
 
 		r = requests.get(baseUrl + "/" + self.channelName)
 		soup = BeautifulSoup(r.text, 'html.parser')
@@ -48,7 +51,22 @@ class Channel:
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink(videoContainer))
 
-		# for now I only know how to find the ID from a video, so take the last item
+		paginationLists = soup.findAll("ul", "pagination")
+		for paginationList in paginationLists:
+			for page in paginationList.findAll("li"):
+				# skip any page number list items that have the "disabled" class.
+				disabled = False
+				if page.has_attr("class"):
+					if "disabled" in page['class']:
+						continue 
+				# it's not disabled, keep on trucking.
+				if disabled == False:
+					if page.findAll("i", "fa-angle-double-left"):
+						self.hasPrevPage = True
+					if page.findAll("i", "fa-angle-double-right"):
+						self.hasNextPage = True
+		
+		# for now I only know how to find the channel's ID from a video, so take the last item
 		# in videos and find the channel's ID.
 		videoRequest = requests.get(baseUrl + self.videos[-1].pageUrl)
 		channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
@@ -151,6 +169,14 @@ for channel in channels:
 	print("Videos:")
 	for video in channel.videos:
 		print(video.title + "\n" + video.thumbnail + "\n" + video.url + "\n")
+	if channel.hasPrevPage:
+		print("Has Prev: true")
+	else:
+		print("Has Prev: false")
+	if channel.hasNextPage:
+		print("Has Next: true")
+	else:
+		print("Has Next: false")
 
 vid = channels[-1].videos[-1]
 
