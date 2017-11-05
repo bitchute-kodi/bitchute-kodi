@@ -41,6 +41,9 @@ class Channel:
 		self.hasPrevPage = False
 		self.hasNextPage = False
 
+		self.setPage(self.page)
+
+	def setPage(self, pageNumber):
 		r = requests.get(baseUrl + "/" + self.channelName)
 		soup = BeautifulSoup(r.text, 'html.parser')
 
@@ -76,6 +79,7 @@ class Channel:
 		# armed with a channelId we can set the url for all our videos.
 		for video in self.videos:
 			video.setUrl(self.id)
+
 
 def login():
 	#BitChute uses a token to prevent csrf attacks, get the token to make our request.
