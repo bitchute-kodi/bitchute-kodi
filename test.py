@@ -28,6 +28,14 @@ class VideoLink:
 			self.thumbnail = baseUrl + thumbnailMatches[0].get("src")
 
 	def getUrl(self, channelId):
+		req = fetchLoggedIn(baseUrl + "/video/" + self.id)
+		soup = BeautifulSoup(req.text, 'html.parser')
+		for container in soup.findAll("span", {"class":"video-magnet"}):
+			for link in container.findAll("a"):
+				magnetUrl = link.get("href")
+				if magnetUrl.startswith("magnet:?"):
+					return magnetUrl
+		# If we couldn't find the magnet URL return the default .torrent file.
 		return(baseUrl + "/torrent/" + channelId + "/" + self.id + ".torrent")
 	def setUrl(self, channelId):
 		self.url = self.getUrl(channelId)
@@ -82,8 +90,8 @@ class Channel:
 			raise ValueError("channel Id not found for " + self.channelName + ".")
 		
 		# armed with a channelId we can set the url for all our videos.
-		for video in self.videos:
-			video.setUrl(self.id)
+		#for video in self.videos:
+		#	video.setUrl(self.id)
 
 
 def login():
@@ -175,26 +183,23 @@ for channel in channels:
 	print(channel.thumbnail)
 	print("Videos:")
 	for video in channel.videos:
-		print(video.title + "\n" + video.thumbnail + "\n" + video.url + "\n")
+		print(video.title + "\n" + video.thumbnail + "\n" + video.id + "\n")
 	if channel.hasPrevPage:
 		print("Has Prev: true")
 	else:
 		print("Has Prev: false")
 	if channel.hasNextPage:
 		print("Has Next: true")
-		channel.setPage(channel.page + 1)
-		print("Page: " + str(channel.page))
-		for video in channel.videos:
-			print(video.title + "\n" + video.thumbnail + "\n" + video.url + "\n")
 	else:
 		print("Has Next: false")
 
 vid = channels[-1].videos[-1]
+vid.setUrl(channels[-1].id)
 
 output = ""
 cnt = 0
 dlnaUrl = None
-webTorrentClient = subprocess.Popen(["/usr/local/bin/webtorrent-hybrid", vid.url, "--dlna"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+webTorrentClient = subprocess.Popen('/usr/local/bin/webtorrent-hybrid "' +  vid.url + '" --dlna', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 print("running with PID " + str(webTorrentClient.pid))
 for stdout_line in webTorrentClient.stdout:
 	output += stdout_line.decode()
