@@ -128,8 +128,7 @@ def login():
 	
 	return(authCookies)
 	
-def getSessionCookie():
-	return login()
+def setSessionCookies():
 	cookiesFile = open("cookies.json", "r")
 	cookiesString = cookiesFile.read()
 	cookiesFile.close()
@@ -149,6 +148,7 @@ def getSessionCookie():
 	for cookie in cookies:
 		jar.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'], expires=cookie['expires'])
 	
+	session.cookies = jar
 	return jar
 
 def fetchLoggedIn(url):
@@ -198,7 +198,7 @@ def getSubscriptions():
 	return(subscriptions)
 
 session = requests.Session()
-sessionCookies = getSessionCookie()
+sessionCookies = setSessionCookies()
 channels = getSubscriptions()
 
 for channel in channels:
