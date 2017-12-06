@@ -82,7 +82,7 @@ class Channel:
 		
 		# for now I only know how to find the channel's ID from a video, so take the last item
 		# in videos and find the channel's ID.
-		videoRequest = session.get(baseUrl + self.videos[-1].pageUrl)
+		videoRequest = requests.get(baseUrl + self.videos[-1].pageUrl)
 		channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
 		if channelIdMatches:
 			self.id = channelIdMatches.group().split("/")[-1]
@@ -96,7 +96,8 @@ class Channel:
 
 def login():
 	#BitChute uses a token to prevent csrf attacks, get the token to make our request.
-	r = session.get(baseUrl)
+	r = requests.get(baseUrl)
+	csrfJar = r.cookies
 	soup = BeautifulSoup(r.text, 'html.parser')
 	csrftoken = soup.findAll("input", {"name":"csrfmiddlewaretoken"})[0].get("value")
 
@@ -115,9 +116,9 @@ def login():
 
 	post_data = {'csrfmiddlewaretoken': csrftoken, 'username': username, 'password': password}
 	headers = {'Referer': baseUrl + "/", 'Origin': baseUrl}
-	response = session.post(baseUrl + "/accounts/login/", data=post_data, headers=headers)
+	response = requests.post(baseUrl + "/accounts/login/", data=post_data, headers=headers, cookies=csrfJar)
 	authCookies = []
-	for cookie in session.cookies:
+	for cookie in response.cookies:
 		authCookies.append({ 'name': cookie.name, 'value': cookie.value, 'domain': cookie.domain, 'path': cookie.path, 'expires': cookie.expires })
 	
 	#stash our cookies in our JSON cookie jar
@@ -148,11 +149,10 @@ def setSessionCookies():
 	for cookie in cookies:
 		jar.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'], expires=cookie['expires'])
 	
-	session.cookies = jar
 	return jar
 
 def fetchLoggedIn(url):
-	req = session.get(url)
+	req = requests.get(url, cookies=sessionCookies)
 	soup = BeautifulSoup(req.text, 'html.parser')
 	loginUser = soup.findAll("ul", {"class":"user-menu-dropdown"})
 	if loginUser:
@@ -167,24 +167,18 @@ def fetchLoggedIn(url):
 
 def postLoggedIn(url, referer, params):
 	#BitChute uses a token to prevent csrf attacks, get the token to make our request.
-	r = session.get(referer)
-	soup = BeautifulSoup(r.text, 'html.parser')
-	refererCsrftoken = soup.findAll("input", {"name":"csrfmiddlewaretoken"})[0].get("value")
-	
 	csrftoken = None
-	for cookie in session.cookies:
+	for cookie in sessionCookies:
 		if cookie.name == 'csrftoken':
 			csrftoken = cookie.value
 			break
 
-	post_data = {'csrfmiddlewaretoken': refererCsrftoken}
+	post_data = {'csrfmiddlewaretoken': csrftoken}
 	for param in params:
 		post_data[param] = params[param]
 
 	headers = {'Referer': referer, 'Host': 'www.bitchute.com', 'Origin': baseUrl, 'Pragma': 'no-cache', 'Cache-Control': 'no-cache'}
-	req = requests.Request('POST', url, data=post_data, headers=headers, cookies=session.cookies)
-	prepReq = req.prepare()
-	response = session.send(prepReq)
+	response = requests.post(url, data=post_data, headers=headers, cookies=sessionCookies)
 	return response
 
 def getSubscriptions():
@@ -197,7 +191,6 @@ def getSubscriptions():
 			subscriptions.append(Channel(name))
 	return(subscriptions)
 
-session = requests.Session()
 sessionCookies = setSessionCookies()
 channels = getSubscriptions()
 
