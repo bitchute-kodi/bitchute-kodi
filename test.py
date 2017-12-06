@@ -57,13 +57,13 @@ class Channel:
 		self.page = pageNumber
 		self.hasPrevPage = False
 		self.hasNextPage = False
-		r = requests.get(baseUrl + "/" + self.channelName + "/?page=" + str(self.page))
+		r = postLoggedIn(baseUrl + "/channel/" + self.channelName + "/extend/", baseUrl + "/channel/" + self.channelName + "/",{"offset": 10 * (self.page - 1)})
 		soup = BeautifulSoup(r.text, 'html.parser')
 
 		thumbnailImages = soup.findAll("img", id="fileupload-medium-icon-2")
 		if thumbnailImages:
 			self.thumbnail = baseUrl + thumbnailImages[0].get("src")
-
+		
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink(videoContainer))
 
@@ -82,7 +82,7 @@ class Channel:
 		
 		# for now I only know how to find the channel's ID from a video, so take the last item
 		# in videos and find the channel's ID.
-		videoRequest = requests.get(baseUrl + self.videos[-1].pageUrl)
+		videoRequest = session.get(baseUrl + self.videos[-1].pageUrl)
 		channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
 		if channelIdMatches:
 			self.id = channelIdMatches.group().split("/")[-1]
@@ -96,8 +96,7 @@ class Channel:
 
 def login():
 	#BitChute uses a token to prevent csrf attacks, get the token to make our request.
-	r = requests.get(baseUrl)
-	csrfJar = r.cookies
+	r = session.get(baseUrl)
 	soup = BeautifulSoup(r.text, 'html.parser')
 	csrftoken = soup.findAll("input", {"name":"csrfmiddlewaretoken"})[0].get("value")
 
@@ -116,9 +115,9 @@ def login():
 
 	post_data = {'csrfmiddlewaretoken': csrftoken, 'username': username, 'password': password}
 	headers = {'Referer': baseUrl + "/", 'Origin': baseUrl}
-	response = requests.post(baseUrl + "/accounts/login/", data=post_data, headers=headers, cookies=csrfJar)
+	response = session.post(baseUrl + "/accounts/login/", data=post_data, headers=headers)
 	authCookies = []
-	for cookie in response.cookies:
+	for cookie in session.cookies:
 		authCookies.append({ 'name': cookie.name, 'value': cookie.value, 'domain': cookie.domain, 'path': cookie.path, 'expires': cookie.expires })
 	
 	#stash our cookies in our JSON cookie jar
@@ -130,6 +129,7 @@ def login():
 	return(authCookies)
 	
 def getSessionCookie():
+	return login()
 	cookiesFile = open("cookies.json", "r")
 	cookiesString = cookiesFile.read()
 	cookiesFile.close()
@@ -152,9 +152,9 @@ def getSessionCookie():
 	return jar
 
 def fetchLoggedIn(url):
-	req = requests.get(url, cookies=sessionCookies)
+	req = session.get(url)
 	soup = BeautifulSoup(req.text, 'html.parser')
-	loginUser = soup.findAll("div", {"class":"login-user"})
+	loginUser = soup.findAll("ul", {"class":"user-menu-dropdown"})
 	if loginUser:
 		profileLink = loginUser[0].findAll("a",{"class":"dropdown-item", "href":"/profile"})
 		if profileLink:
@@ -164,6 +164,28 @@ def fetchLoggedIn(url):
 	cookiesFile.write("")
 	cookiesFile.close()
 	raise ValueError("Not currently logged in.")
+
+def postLoggedIn(url, referer, params):
+	#BitChute uses a token to prevent csrf attacks, get the token to make our request.
+	r = session.get(referer)
+	soup = BeautifulSoup(r.text, 'html.parser')
+	refererCsrftoken = soup.findAll("input", {"name":"csrfmiddlewaretoken"})[0].get("value")
+	
+	csrftoken = None
+	for cookie in session.cookies:
+		if cookie.name == 'csrftoken':
+			csrftoken = cookie.value
+			break
+
+	post_data = {'csrfmiddlewaretoken': refererCsrftoken}
+	for param in params:
+		post_data[param] = params[param]
+
+	headers = {'Referer': referer, 'Host': 'www.bitchute.com', 'Origin': baseUrl, 'Pragma': 'no-cache', 'Cache-Control': 'no-cache'}
+	req = requests.Request('POST', url, data=post_data, headers=headers, cookies=session.cookies)
+	prepReq = req.prepare()
+	response = session.send(prepReq)
+	return response
 
 def getSubscriptions():
 	subscriptions = []
@@ -175,6 +197,7 @@ def getSubscriptions():
 			subscriptions.append(Channel(name))
 	return(subscriptions)
 
+session = requests.Session()
 sessionCookies = getSessionCookie()
 channels = getSubscriptions()
 
