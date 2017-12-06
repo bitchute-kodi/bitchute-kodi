@@ -49,7 +49,15 @@ class Channel:
 		self.hasPrevPage = False
 		self.hasNextPage = False
 
+		self.setThumbnail()
 		self.setPage(self.page)
+
+	def setThumbnail(self):
+		thumbnailReq = fetchLoggedIn(baseUrl + "/channel/" + self.channelName)
+		thumbnailSoup = BeautifulSoup(thumbnailReq.text, 'html.parser')
+		thumbnailImages = thumbnailSoup.findAll("img", id="fileupload-medium-icon-2")
+		if thumbnailImages:
+			self.thumbnail = baseUrl + thumbnailImages[0].get("src")
 
 	def setPage(self, pageNumber):
 		self.videos = []
@@ -57,12 +65,9 @@ class Channel:
 		self.page = pageNumber
 		self.hasPrevPage = False
 		self.hasNextPage = False
+		
 		r = postLoggedIn(baseUrl + "/channel/" + self.channelName + "/extend/", baseUrl + "/channel/" + self.channelName + "/",{"offset": 10 * (self.page - 1)})
 		soup = BeautifulSoup(r.text, 'html.parser')
-
-		thumbnailImages = soup.findAll("img", id="fileupload-medium-icon-2")
-		if thumbnailImages:
-			self.thumbnail = baseUrl + thumbnailImages[0].get("src")
 		
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink(videoContainer))
