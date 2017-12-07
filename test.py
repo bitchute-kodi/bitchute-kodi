@@ -25,7 +25,7 @@ class VideoLink:
 		thumbnailMatches = containerSoup.findAll('img', "img-responsive")
 		
 		if thumbnailMatches:
-			self.thumbnail = baseUrl + thumbnailMatches[0].get("src")
+			self.thumbnail = baseUrl + thumbnailMatches[0].get("data-src")
 
 	def getUrl(self, channelId):
 		req = fetchLoggedIn(baseUrl + "/video/" + self.id)
@@ -41,16 +41,15 @@ class VideoLink:
 		self.url = self.getUrl(channelId)
 
 class Channel:
-	def __init__(self, channelName):
+	def __init__(self, channelName, thumbnail=None):
 		self.channelName = channelName
 		self.videos = []
-		self.thumbnail = None
+		self.thumbnail = thumbnail
 		self.page = 1
 		self.hasPrevPage = False
 		self.hasNextPage = False
 
-		self.setThumbnail()
-		self.setPage(self.page)
+		#self.setPage(self.page)
 
 	def setThumbnail(self):
 		thumbnailReq = fetchLoggedIn(baseUrl + "/channel/" + self.channelName)
@@ -71,19 +70,22 @@ class Channel:
 		
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink(videoContainer))
+		x = len(self.videos)
+		if len(self.videos) >= 10:
+			self.hasNextPage = True
 
-		paginationLists = soup.findAll("ul", "pagination")
-		for paginationList in paginationLists:
-			for page in paginationList.findAll("li"):
-				# skip any page number list items that have the "disabled" class.
-				if page.has_attr("class"):
-					if "disabled" in page['class']:
-						continue 
-				# it's not disabled, keep on trucking.
-				if page.findAll("i", "fa-angle-double-left"):
-					self.hasPrevPage = True
-				if page.findAll("i", "fa-angle-double-right"):
-					self.hasNextPage = True
+		# paginationLists = soup.findAll("ul", "pagination")
+		# for paginationList in paginationLists:
+		# 	for page in paginationList.findAll("li"):
+		# 		# skip any page number list items that have the "disabled" class.
+		# 		if page.has_attr("class"):
+		# 			if "disabled" in page['class']:
+		# 				continue 
+		# 		# it's not disabled, keep on trucking.
+		# 		if page.findAll("i", "fa-angle-double-left"):
+		# 			self.hasPrevPage = True
+		# 		if page.findAll("i", "fa-angle-double-right"):
+		# 			self.hasNextPage = True
 		
 		# for now I only know how to find the channel's ID from a video, so take the last item
 		# in videos and find the channel's ID.
@@ -191,9 +193,16 @@ def getSubscriptions():
 	req = fetchLoggedIn(baseUrl + "/subscriptions")
 	soup = BeautifulSoup(req.text, 'html.parser')
 	for container in soup.findAll("div", {"class":"subscription-container"}):
+		thumbnail = None
+		for thumb in container.findAll("img", {"class":"subscription-image"}):
+			if thumb.has_attr("data-src"):
+				thumbnail = baseUrl + thumb.get("data-src")
+				thumbnail = thumbnail.replace("_small.", "_large.")
+				break
 		for link in container.findAll("a", {"rel":"author"}):
 			name = link.get("href").split("/")[-1]
-			subscriptions.append(Channel(name))
+			subscriptions.append(Channel(name, thumbnail))
+		print(thumbnail)
 	return(subscriptions)
 
 sessionCookies = setSessionCookies()
