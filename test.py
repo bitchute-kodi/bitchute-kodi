@@ -9,23 +9,12 @@ import subprocess
 baseUrl = "https://www.bitchute.com"
 
 class VideoLink:
-	def __init__(self, containerSoup):
-		titleDiv = containerSoup.findAll('div', "channel-videos-title")[0]
-		linkSoup = titleDiv.findAll('a')[0]
-		
-		self.title = linkSoup.string
-		self.pageUrl = linkSoup.get("href")
-		self.id = self.pageUrl.split("/")[-1]
+	def __init__(self):
+		self.title = None
+		self.pageUrl = None
+		self.id = None
 		self.thumbnail = None
 		self.url = None
-		#before we can find thumnails let's strip out play button images.
-		for playButton in containerSoup.findAll('img', "play-overlay-icon"):
-			playButton.extract()
-		
-		thumbnailMatches = containerSoup.findAll('img', "img-responsive")
-		
-		if thumbnailMatches:
-			self.thumbnail = baseUrl + thumbnailMatches[0].get("data-src")
 
 	def getUrl(self, channelId):
 		req = fetchLoggedIn(baseUrl + "/video/" + self.id)
@@ -39,6 +28,42 @@ class VideoLink:
 		return(baseUrl + "/torrent/" + channelId + "/" + self.id + ".torrent")
 	def setUrl(self, channelId):
 		self.url = self.getUrl(channelId)
+	@staticmethod
+	def getVideoFromChannelVideosContainer(containerSoup):
+		video = VideoLink()
+
+		#find the video title and URL
+		titleDiv = containerSoup.findAll('div', "channel-videos-title")[0]
+		linkSoup = titleDiv.findAll('a')[0]
+
+		video.title = linkSoup.string
+		video.pageUrl = linkSoup.get("href")
+		video.id = video.pageUrl.split("/")[-1]
+
+		#before we can find thumnails let's strip out play button images.
+		for playButton in containerSoup.findAll('img', "play-overlay-icon"):
+			playButton.extract()
+		
+		thumbnailMatches = containerSoup.findAll('img', "img-responsive")
+		if thumbnailMatches:
+			video.thumbnail = baseUrl + thumbnailMatches[0].get("data-src")
+		return video
+	@staticmethod
+	def getVideoFromVideoCard(videoSoup):
+		video = VideoLink()
+		linkSoup = videoSoup.findAll('a')[0]
+
+		video.pageUrl = linkSoup.get("href")
+		video.id = video.pageUrl.split("/")[-1]
+
+		titleSoup = videoSoup.findAll('div', 'video-card-text')[0].findAll('p')[0].findAll('a')[0]
+		video.title = titleSoup.text
+
+		thumbnailMatches = videoSoup.findAll('img', "img-responsive")
+		if thumbnailMatches:
+			video.thumbnail = baseUrl + thumbnailMatches[0].get("data-src")
+		
+		return video
 
 class Channel:
 	def __init__(self, channelName, thumbnail=None):
@@ -69,7 +94,7 @@ class Channel:
 		soup = BeautifulSoup(r.text, 'html.parser')
 		
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
-			self.videos.append(VideoLink(videoContainer))
+			self.videos.append(VideoLink.getVideoFromChannelVideosContainer(videoContainer))
 		x = len(self.videos)
 		if len(self.videos) >= 10:
 			self.hasNextPage = True
@@ -206,25 +231,17 @@ def getSubscriptions():
 	return(subscriptions)
 
 sessionCookies = setSessionCookies()
-channels = getSubscriptions()
 
-for channel in channels:
-	print(channel.channelName + " (" + channel.id + ")")
-	print(channel.thumbnail)
-	print("Videos:")
-	for video in channel.videos:
-		print(video.title + "\n" + video.thumbnail + "\n" + video.id + "\n")
-	if channel.hasPrevPage:
-		print("Has Prev: true")
-	else:
-		print("Has Prev: false")
-	if channel.hasNextPage:
-		print("Has Next: true")
-	else:
-		print("Has Next: false")
+subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "offset": 0})
+soup = BeautifulSoup(subscriptionActivity.text, 'html.parser')
+videos = []
+for videoContainer in soup.findAll('div', "video-card"):
+	videos.append(VideoLink.getVideoFromVideoCard(videoContainer))
 
-vid = channels[-1].videos[-1]
-vid.setUrl(channels[-1].id)
+
+
+vid = videos[-1]
+vid.setUrl(0)
 
 output = ""
 cnt = 0
