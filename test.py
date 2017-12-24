@@ -46,7 +46,7 @@ class VideoLink:
 		
 		thumbnailMatches = containerSoup.findAll('img', "img-responsive")
 		if thumbnailMatches:
-			video.thumbnail = baseUrl + thumbnailMatches[0].get("data-src")
+			video.thumbnail = thumbnailMatches[0].get("data-src")
 		return video
 	@staticmethod
 	def getVideoFromVideoCard(videoSoup):
@@ -231,7 +231,9 @@ def getSubscriptions():
 	return(subscriptions)
 
 sessionCookies = setSessionCookies()
-
+chan = Channel("mediamonarchy")
+chan.setThumbnail()
+chan.setPage(1)
 subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "offset": 0})
 soup = BeautifulSoup(subscriptionActivity.text, 'html.parser')
 videos = []
