@@ -61,7 +61,7 @@ class VideoLink:
 
 		thumbnailMatches = videoSoup.findAll('img', "img-responsive")
 		if thumbnailMatches:
-			video.thumbnail = baseUrl + thumbnailMatches[0].get("data-src")
+			video.thumbnail = thumbnailMatches[0].get("data-src")
 		
 		return video
 
@@ -81,7 +81,7 @@ class Channel:
 		thumbnailSoup = BeautifulSoup(thumbnailReq.text, 'html.parser')
 		thumbnailImages = thumbnailSoup.findAll("img", id="fileupload-medium-icon-2")
 		if thumbnailImages and thumbnailImages[0].has_attr("data-src"):
-			self.thumbnail = baseUrl + thumbnailImages[0].get("data-src")
+			self.thumbnail = thumbnailImages[0].get("data-src")
 
 	def setPage(self, pageNumber):
 		self.videos = []
