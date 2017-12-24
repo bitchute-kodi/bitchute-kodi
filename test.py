@@ -13,6 +13,7 @@ class VideoLink:
 		self.title = None
 		self.pageUrl = None
 		self.id = None
+		self.channnelName = None
 		self.thumbnail = None
 		self.url = None
 
@@ -63,6 +64,12 @@ class VideoLink:
 		if thumbnailMatches:
 			video.thumbnail = thumbnailMatches[0].get("data-src")
 		
+		#try to find the name of the channel from video-card-text portion of the card.
+		try:
+			channelNameSoup = videoSoup.findAll('div', 'video-card-text')[0].findAll('p')[1].findAll('a')[0]
+			video.channnelName = channelNameSoup.text
+		except:
+			pass
 		return video
 
 class Channel:
@@ -95,6 +102,7 @@ class Channel:
 		
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink.getVideoFromChannelVideosContainer(videoContainer))
+			self.videos[1].channnelName = self.channelName
 		x = len(self.videos)
 		if len(self.videos) >= 10:
 			self.hasNextPage = True
@@ -231,9 +239,9 @@ def getSubscriptions():
 	return(subscriptions)
 
 sessionCookies = setSessionCookies()
-chan = Channel("mediamonarchy")
-chan.setThumbnail()
-chan.setPage(1)
+# chan = Channel("inrangetv")
+# chan.setThumbnail()
+# chan.setPage(1)
 subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "offset": 0})
 soup = BeautifulSoup(subscriptionActivity.text, 'html.parser')
 videos = []
