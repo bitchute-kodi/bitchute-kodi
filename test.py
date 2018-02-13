@@ -97,12 +97,12 @@ class Channel:
 		self.hasPrevPage = False
 		self.hasNextPage = False
 		
-		r = postLoggedIn(baseUrl + "/channel/" + self.channelName + "/extend/", baseUrl + "/channel/" + self.channelName + "/",{"offset": 10 * (self.page - 1)})
+		r = postLoggedIn(baseUrl + "/channel/" + self.channelName + "/extend/", baseUrl + "/channel/" + self.channelName + "/",{"index": (self.page)})
 		soup = BeautifulSoup(r.text, 'html.parser')
 		
 		for videoContainer in soup.findAll('div', "channel-videos-container"):
 			self.videos.append(VideoLink.getVideoFromChannelVideosContainer(videoContainer))
-			self.videos[1].channnelName = self.channelName
+			self.videos[-1].channnelName = self.channelName
 		x = len(self.videos)
 		if len(self.videos) >= 10:
 			self.hasNextPage = True
@@ -239,9 +239,9 @@ def getSubscriptions():
 	return(subscriptions)
 
 sessionCookies = setSessionCookies()
-# chan = Channel("inrangetv")
-# chan.setThumbnail()
-# chan.setPage(1)
+chan = Channel("inrangetv")
+chan.setThumbnail()
+chan.setPage(1)
 subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "index": 0})
 soup = BeautifulSoup(subscriptionActivity.text, 'html.parser')
 videos = []
