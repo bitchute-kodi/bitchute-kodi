@@ -13,7 +13,7 @@ class VideoLink:
 		self.title = None
 		self.pageUrl = None
 		self.id = None
-		self.channnelName = None
+		self.channelName = None
 		self.thumbnail = None
 		self.url = None
 
@@ -67,7 +67,7 @@ class VideoLink:
 		#try to find the name of the channel from video-card-text portion of the card.
 		try:
 			channelNameSoup = videoSoup.findAll('div', 'video-card-text')[0].findAll('p')[1].findAll('a')[0]
-			video.channnelName = channelNameSoup.text
+			video.channelName = channelNameSoup.get("href").split("/")[-1]
 		except:
 			pass
 		return video
@@ -242,7 +242,7 @@ sessionCookies = setSessionCookies()
 # chan = Channel("inrangetv")
 # chan.setThumbnail()
 # chan.setPage(1)
-subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "offset": 0})
+subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "index": 0})
 soup = BeautifulSoup(subscriptionActivity.text, 'html.parser')
 videos = []
 for videoContainer in soup.findAll('div', "video-card"):
