@@ -20,11 +20,10 @@ class VideoLink:
 	def getUrl(self, channelId):
 		req = fetchLoggedIn(baseUrl + "/video/" + self.id)
 		soup = BeautifulSoup(req.text, 'html.parser')
-		for container in soup.findAll("span", {"class":"video-magnet"}):
-			for link in container.findAll("a"):
-				magnetUrl = link.get("href")
-				if magnetUrl.startswith("magnet:?"):
-					return magnetUrl
+		for link in soup.findAll("a", href=re.compile("^magnet")):
+			magnetUrl = link.get("href")
+			if magnetUrl.startswith("magnet:?"):
+				return magnetUrl
 		# If we couldn't find the magnet URL return the default .torrent file.
 		return(baseUrl + "/torrent/" + channelId + "/" + self.id + ".torrent")
 	def setUrl(self, channelId):
@@ -39,6 +38,7 @@ class VideoLink:
 
 		video.title = linkSoup.string
 		video.pageUrl = linkSoup.get("href")
+		video.pageUrl = video.pageUrl.rstrip('/')
 		video.id = video.pageUrl.split("/")[-1]
 
 		#before we can find thumnails let's strip out play button images.
@@ -55,6 +55,7 @@ class VideoLink:
 		linkSoup = videoSoup.findAll('a')[0]
 
 		video.pageUrl = linkSoup.get("href")
+		video.pageUrl = video.pageUrl.rstrip('/')
 		video.id = video.pageUrl.split("/")[-1]
 
 		titleSoup = videoSoup.findAll('div', 'video-card-text')[0].findAll('p')[0].findAll('a')[0]
@@ -251,7 +252,7 @@ for videoContainer in soup.findAll('div', "video-card"):
 
 
 vid = videos[-1]
-vid.setUrl(0)
+vid.setUrl(chan.id)
 
 output = ""
 cnt = 0
