@@ -231,16 +231,19 @@ def getSubscriptions():
 		thumbnail = None
 		for thumb in container.findAll("img", {"class":"subscription-image"}):
 			if thumb.has_attr("data-src"):
-				thumbnail = baseUrl + thumb.get("data-src")
+				thumbnail = thumb.get("data-src")
 				thumbnail = thumbnail.replace("_small.", "_large.")
 				break
 		for link in container.findAll("a", {"rel":"author"}):
-			name = link.get("href").split("/")[-1]
+			href = link.get("href").rstrip('/')
+			name = href.split("/")[-1]
 			subscriptions.append(Channel(name, thumbnail))
 		print(thumbnail)
 	return(subscriptions)
 
 sessionCookies = setSessionCookies()
+subs = getSubscriptions()
+
 chan = Channel("inrangetv")
 chan.setThumbnail()
 chan.setPage(1)
