@@ -17,17 +17,16 @@ class VideoLink:
 		self.thumbnail = None
 		self.url = None
 
-	def getUrl(self, channelId):
+	def getUrl(self):
 		req = fetchLoggedIn(baseUrl + "/video/" + self.id)
 		soup = BeautifulSoup(req.text, 'html.parser')
 		for link in soup.findAll("a", href=re.compile("^magnet")):
 			magnetUrl = link.get("href")
 			if magnetUrl.startswith("magnet:?"):
 				return magnetUrl
-		# If we couldn't find the magnet URL return the default .torrent file.
-		return(baseUrl + "/torrent/" + channelId + "/" + self.id + ".torrent")
-	def setUrl(self, channelId):
-		self.url = self.getUrl(channelId)
+		raise ValueError("Could not find the magnet link for this video.")
+	def setUrl(self):
+		self.url = self.getUrl()
 	@staticmethod
 	def getVideoFromChannelVideosContainer(containerSoup):
 		video = VideoLink()
@@ -124,12 +123,12 @@ class Channel:
 		
 		# for now I only know how to find the channel's ID from a video, so take the last item
 		# in videos and find the channel's ID.
-		videoRequest = requests.get(baseUrl + self.videos[-1].pageUrl)
-		channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
-		if channelIdMatches:
-			self.id = channelIdMatches.group().split("/")[-1]
-		else:
-			raise ValueError("channel Id not found for " + self.channelName + ".")
+		# videoRequest = requests.get(baseUrl + self.videos[-1].pageUrl)
+		# channelIdMatches = re.search('/torrent/\d+', videoRequest.text)
+		# if channelIdMatches:
+		# 	self.id = channelIdMatches.group().split("/")[-1]
+		# else:
+		# 	raise ValueError("channel Id not found for " + self.channelName + ".")
 		
 		# armed with a channelId we can set the url for all our videos.
 		#for video in self.videos:
@@ -248,7 +247,8 @@ chan = Channel("inrangetv")
 chan.setThumbnail()
 chan.setPage(1)
 subscriptionActivity = postLoggedIn(baseUrl + "/extend/", baseUrl,{"name": "subscribed", "index": 0})
-soup = BeautifulSoup(subscriptionActivity.text, 'html.parser')
+data = json.loads(subscriptionActivity.text)
+soup = BeautifulSoup(data['html'], 'html.parser')
 videos = []
 for videoContainer in soup.findAll('div', "video-card"):
 	videos.append(VideoLink.getVideoFromVideoCard(videoContainer))
@@ -256,7 +256,7 @@ for videoContainer in soup.findAll('div', "video-card"):
 
 
 vid = videos[-1]
-vid.setUrl(chan.id)
+vid.setUrl()
 
 output = ""
 cnt = 0
