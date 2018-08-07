@@ -71,6 +71,24 @@ class VideoLink:
 		except:
 			pass
 		return video
+	@staticmethod
+	def getVideoFromPlaylist(container):
+		video = VideoLink()
+		titleSoup = container.findAll('div', 'text-container')[0].findAll('div', 'title')[0].findAll('a')[0]
+		video.title = titleSoup.text
+		video.pageUrl = titleSoup.get("href").rstrip('/')
+		video.id = video.pageUrl.split("/")[-1]
+		try:
+			channelNameSoup = container.findAll('div', 'text-container')[0].findAll('div', 'channel')[0].findAll('a')[0]
+			video.channelName = channelNameSoup.get("href").rstrip('/').split("/")[-1]
+		except:
+			pass
+
+		for thumb in container.findAll("img", {"class": "img-responsive"}):
+			if(thumb.has_attr("data-src")):
+				video.thumbnail = thumb.get("data-src")
+			break
+		return video
 
 class Channel:
 	def __init__(self, channelName, thumbnail=None):
@@ -240,9 +258,21 @@ def getSubscriptions():
 		print(thumbnail)
 	return(subscriptions)
 
-sessionCookies = setSessionCookies()
-subs = getSubscriptions()
+def getWatchLater():
+	videos = []
+	req = fetchLoggedIn(baseUrl + "/playlist/watch-later/")
+	soup = BeautifulSoup(req.text, 'html.parser')
+	for container in soup.findAll("div", {"class": "playlist-video"}):
+		videos.append(VideoLink.getVideoFromPlaylist(container))
+	return videos
+		
 
+sessionCookies = setSessionCookies()
+
+wl = getWatchLater()
+raise ValueError("done testing")
+
+subs = getSubscriptions()
 chan = Channel("inrangetv")
 chan.setThumbnail()
 chan.setPage(1)
