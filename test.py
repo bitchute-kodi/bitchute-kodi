@@ -89,6 +89,14 @@ class VideoLink:
 				video.thumbnail = thumb.get("data-src")
 			break
 		return video
+	@staticmethod
+	def getVideosByPlaylist(playlistId):
+		videos = []
+		req = fetchLoggedIn(baseUrl + "/playlist/" + playlistId)
+		soup = BeautifulSoup(req.text, 'html.parser')
+		for container in soup.findAll("div", {"class": "playlist-video"}):
+			videos.append(VideoLink.getVideoFromPlaylist(container))
+		return videos
 
 class Channel:
 	def __init__(self, channelName, thumbnail=None):
@@ -259,17 +267,13 @@ def getSubscriptions():
 	return(subscriptions)
 
 def getWatchLater():
-	videos = []
-	req = fetchLoggedIn(baseUrl + "/playlist/watch-later/")
-	soup = BeautifulSoup(req.text, 'html.parser')
-	for container in soup.findAll("div", {"class": "playlist-video"}):
-		videos.append(VideoLink.getVideoFromPlaylist(container))
-	return videos
+	return VideoLink.getVideosByPlaylist("watch-later")
 		
 
 sessionCookies = setSessionCookies()
 
 wl = getWatchLater()
+pl = VideoLink.getVideosByPlaylist("EtBP5FoOsbqB")
 raise ValueError("done testing")
 
 subs = getSubscriptions()
