@@ -90,10 +90,11 @@ class VideoLink:
 			break
 		return video
 	@staticmethod
-	def getVideosByPlaylist(playlistId):
+	def getVideosByPlaylist(playlistId, offset = 0):
 		videos = []
-		req = fetchLoggedIn(baseUrl + "/playlist/" + playlistId)
-		soup = BeautifulSoup(req.text, 'html.parser')
+		req = postLoggedIn(baseUrl + "/playlist/" + playlistId + "/extend/", baseUrl + "/playlist/" + playlistId, {"offset": offset})
+		data = json.loads(req.text)
+		soup = BeautifulSoup(data["html"], 'html.parser')
 		for container in soup.findAll("div", {"class": "playlist-video"}):
 			videos.append(VideoLink.getVideoFromPlaylist(container))
 		return videos
