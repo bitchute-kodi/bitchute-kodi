@@ -8,6 +8,27 @@ import subprocess
 
 baseUrl = "https://www.bitchute.com"
 
+class Playlist:
+	def __init__(self):
+		self.name = None
+		self.id = None
+		self.thumbnail = None
+	@staticmethod
+	def getPlaylists():
+		playlists = []
+		req = fetchLoggedIn(baseUrl + "/playlists/")
+		soup = BeautifulSoup(req.text, 'html.parser')
+		for container in soup.findAll("div", {"class": "playlist-card"}):
+			playlist = Playlist()
+			linkSoup = container.findAll('a')[0]
+			nameSoup = linkSoup.findAll('span', 'title')[0]
+			thumbnailSoup = linkSoup.findAll('img', "img-responsive")[0]
+			playlist.name = nameSoup.text
+			playlist.id = linkSoup.get("href").rstrip('/').split("/")[-1]
+			playlist.thumbnail = thumbnailSoup.get("data-src")
+			playlists.append(playlist)
+		return playlists
+
 class VideoLink:
 	def __init__(self):
 		self.title = None
@@ -267,6 +288,7 @@ def getSubscriptions():
 		print(thumbnail)
 	return(subscriptions)
 
+
 def getWatchLater():
 	return VideoLink.getVideosByPlaylist("watch-later")
 		
@@ -274,7 +296,7 @@ def getWatchLater():
 sessionCookies = setSessionCookies()
 
 wl = getWatchLater()
-pl = VideoLink.getVideosByPlaylist("EtBP5FoOsbqB")
+playlists = Playlist.getPlaylists()
 raise ValueError("done testing")
 
 subs = getSubscriptions()
